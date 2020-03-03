@@ -1,0 +1,125 @@
+---
+- hosts: all
+  vars:
+    todo_user: todoapp
+  tasks:
+    - name: create todo_user
+      become: yes
+      user:
+        name: "{{ todo_user }}"
+        
+    - name: Install packages
+      become: yes
+      package:
+        name:
+          - git
+          - nodejs
+          - npm
+          - mongodb-server
+          - nginx
+          - mongodb
+        state: latest
+        
+    - name: start and enable mongodb
+      become: yes
+      systemd:
+        state: started
+        enabled: yes
+        name: mongod
+        
+    - name: configure firewall
+      become: yes
+      firewalld:
+        service: http
+        permanent: yes
+        zone: public
+        state: enabled
+        
+    - name: configure firewall
+      become: yes
+      firewalld:
+        port: 8080/tcp
+        permanent: yes
+        zone: public
+        state: enabled
+        
+    - name: Change file permissions
+      become: yes
+      file:
+        path: /home/todoapp
+        mode: '0755'
+        
+    - name: Recursively remove directory
+      become: yes
+      file:
+        path: /home/todoapp/app
+        state: absent
+        
+    - name: git clone
+      become: yes
+      git:
+        repo: 'https://github.com/timoguic/ACIT4640-todo-app.git'
+        dest: /home/todoapp/app
+        
+    - name: Install packages based on package.json
+      become: yes
+      npm:
+        path: /home/todoapp/app
+        
+    - name: Change app ownership
+      become: yes
+      file:
+        path: /home/todoapp/app
+        owner: todoapp
+      
+    - name: change permissions
+      become: yes
+      copy:
+        src: ./files/nginx.conf
+        dest: /etc/nginx/nginx.conf
+        owner: nginx
+        
+    - name: move database.js
+      become: yes
+      copy:
+        src: ./files/database.js
+        dest: /home/todoapp/app/config/database.js
+        
+    - name: move ACIT4640
+      become: yes
+      copy:
+        src: ./files/ACIT4640
+        dest: /home/admin/ACIT4640
+        
+    - name: template the todoapp.service files
+      become: yes
+      template:
+        src: ./files/todoapp.service
+        dest: /etc/systemd/system/todoapp.service
+    
+    - name: Run shell
+      become: yes
+      shell: |
+        export LANG=C
+        mongorestore -d acit4640 /home/admin/ACIT4640
+        exit 0
+        
+    - name: Kill nginx
+      become: yes
+      shell: "pkill nginx"
+        
+    - name: start and enable nginx
+      become: yes
+      systemd:
+        state: restarted
+        daemon_reload: yes
+        enabled: yes
+        name: nginx
+        
+    - name: start and enable todoapp
+      become: yes
+      systemd:
+        state: restarted
+        daemon_reload: yes
+        enabled: yes
+        name: todoapp
