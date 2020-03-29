@@ -1,0 +1,32 @@
+---
+- name: Install packages
+  become: yes
+  package:
+    name:
+      - git
+      - nodejs
+      - npm
+      - nginx
+    state: latest
+
+- name: move ACIT4640
+  become: yes
+  copy:
+    src: ../files/ACIT4640
+    dest: /home/admin
+    
+- name: Install mongo
+  become: yes
+  package:
+    name:
+      - mongodb-server
+      - mongodb
+  notify: run shell
+
+- name: provision the nginx configuration file
+  become: yes
+  template:
+    src: nginx.conf
+    dest: /etc/nginx/nginx.conf
+  notify: restart nginx
+  

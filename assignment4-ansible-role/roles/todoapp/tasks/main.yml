@@ -1,0 +1,56 @@
+---
+- name: create todo_user
+  become: yes
+  user:
+    name: "{{ todo_user }}"
+    
+- name: configure firewall
+  become: yes
+  firewalld:
+    port: 8080/tcp
+    permanent: yes
+    zone: public
+    state: enabled
+    
+- name: Change file permissions
+  become: yes
+  file:
+    path: /home/{{ todo_user }}
+    mode: '0755'
+    
+- name: Recursively remove directory
+  become: yes
+  file:
+    path: /home/{{ todo_user }}/app
+    state: absent
+    
+- name: git clone
+  become: yes
+  git:
+    repo: 'https://github.com/timoguic/ACIT4640-todo-app.git'
+    dest: /home/{{ todo_user }}/app
+
+- name: provision the database file
+  become: yes
+  template:
+    src: database.js
+    dest: /home/{{ todo_user }}/app/config/database.js
+  notify: restart and enable mongodb
+    
+- name: Install packages based on package.json
+  become: yes
+  npm:
+    path: /home/{{ todo_user }}/app
+    
+- name: Change app ownership
+  become: yes
+  file:
+    path: /home/{{ todo_user }}/app
+    owner: "{{ todo_user }}"
+    
+- name: provision the todoapp.service files
+  become: yes
+  template:
+    src: todoapp.service
+    dest: /etc/systemd/system/todoapp.service
+  notify: restart and enable todoapp

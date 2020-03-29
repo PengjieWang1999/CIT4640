@@ -1,0 +1,15 @@
+---
+- name: restart nginx
+  become: yes
+  systemd:
+    state: restarted
+    daemon_reload: yes
+    enabled: yes
+    name: nginx
+    
+- name: run shell
+  become: yes
+  shell: |
+    export LANG=C
+    mongorestore -d acit4640 /home/admin/ACIT4640
+    exit 0
